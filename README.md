@@ -8,6 +8,9 @@ extends Control
 func _ready():
 	Supabase.auth_succeeded.connect(receiveData)
 
+	var forestLoot: Dictionary = await Supabase.query_database("Loots", "name", "Forest", "loot")
+	print(forestLoot)
+
 	var allLoot = await Supabase.query_all_database("Loots", "loot")
 	print(allLoot)
 
