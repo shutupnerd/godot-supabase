@@ -1,10 +1,10 @@
 extends Node
 
 const SUPABASE_URL := "" #ENTER
-const SUPABASE_KEY := "" # ENTER
+const SUPABASE_KEY := "" #I used Public key rather than anon key so be aware
 
 const LOCAL_PORT := 50505
-const REDIRECT_URI := "http://localhost:50505"
+var REDIRECT_URI := "http://localhost:" + str(LOCAL_PORT)
 const POLL_TIMEOUT_SEC := 120.0
 
 const USER_DATA = "LiveData"
@@ -54,18 +54,16 @@ func _process(delta: float) -> void:
 		auth_failed.emit("Malformed HTTP request")
 		return
 
-	var method := parts[0] # GET / POST
-	var request_path := parts[1] # e.g. /?code=... or /callback
+	var method := parts[0]
+	var request_path := parts[1]
 
 	if method == "POST" and "/callback" in request_path:
-		# Fragment relay round-trip: tokens are in the POST body
 		_send_html_response(peer, _success_page())
 		peer.disconnect_from_host()
 		_shutdown()
 		_handle_fragment_post(raw)
 
 	elif "code=" in request_path:
-		# PKCE: auth code in query string
 		_send_html_response(peer, _success_page())
 		peer.disconnect_from_host()
 		_shutdown()
@@ -74,7 +72,6 @@ func _process(delta: float) -> void:
 		_exchange_code(params["code"])
 
 	elif "access_token=" in request_path:
-		# Implicit: tokens directly in query string
 		_send_html_response(peer, _success_page())
 		peer.disconnect_from_host()
 		_shutdown()
@@ -82,11 +79,8 @@ func _process(delta: float) -> void:
 		_finalise_session(_parse_query(query))
 
 	else:
-		# Fragment flow: browser landed here with hash — serve relay page.
-		# Server stays open to receive the follow-up POST /callback.
 		_send_html_response(peer, _fragment_relay_page())
 		peer.disconnect_from_host()
-		# Do NOT shutdown — wait for the POST /callback next iteration.
 
 # ── Public entry point ───────────────────────────────────────────────────────
 
@@ -219,7 +213,6 @@ func get_user_data(user_id: String, access_token: String):
 	var http := HTTPRequest.new()
 	add_child(http)
 	
-	# Connect the signal to handle the data once it arrives
 	http.request_completed.connect(func(_result, _response_code, _headers, body):
 		var response=JSON.parse_string(body.get_string_from_utf8())
 		http.queue_free()
@@ -227,7 +220,6 @@ func get_user_data(user_id: String, access_token: String):
 		data_received.emit(response)
 	)
 
-	# We filter by user_id so we only get OUR specific row
 	var url = SUPABASE_URL + "/rest/v1/" + USER_DATA + "?user_id=eq." + user_id
 	
 	var request_headers = [
@@ -349,7 +341,6 @@ func query_all_database(database: String, value: String):
 		http.queue_free()
 	)
 
-	# Note: No filters in the URL = get all rows
 	var url = SUPABASE_URL + "/rest/v1/" + database
 	var headers = [
 		"apikey: " + SUPABASE_KEY,
@@ -366,6 +357,7 @@ func _shutdown() -> void:
 	_elapsed = 0.0
 
 # ── HTML pages ───────────────────────────────────────────────────────────────
+# If im honest i used ai on creating this html part, lmao
 
 func _fragment_relay_page() -> String:
 	return """<!DOCTYPE html>
