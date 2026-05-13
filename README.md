@@ -1,5 +1,7 @@
 # godot-supabase
 Godot Supabase purely for Google Sign in
+> [!CAUTION]
+> Currently it doesnt support critical features such as auto sync data or get data. It will get added on future updates
 
 ### Usage
 ```
